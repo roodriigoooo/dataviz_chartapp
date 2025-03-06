@@ -3,7 +3,6 @@ from streamlit_gsheets import GSheetsConnection
 import time
 import random
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 
 species = ["Adelie", "Chinstrap", "Gentoo"]
