@@ -6,6 +6,8 @@ import plotly.express as px
 import pandas as pd
 from datetime import datetime
 
+from typing_extensions import get_origin
+
 species = ["Adelie", "Chinstrap", "Gentoo"]
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -16,8 +18,10 @@ if 'start_time' not in st.session_state:
     st.session_state.start_time = None
 if 'chart_type' not in st.session_state:
     st.session_state.chart_type = None
+if 'interaction_logged' not in st.session_state:
+    st.session_state.interaction_logged = False
 
-@st.cache_data
+@st.cache_data(ttl=0)
 def load_data():
     df = conn.read(worksheet="penguins")
     valid_species = ["Adelie", "Chinstrap", "Gentoo"]
@@ -27,15 +31,29 @@ def load_data():
     df = df[df['species'].isin(valid_species)]
     return df
 
-def log_interaction(chart_type, time_taken):
-    log_data = pd.DataFrame({
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "chart_type": chart_type,
-        "time_taken": time_taken
-    })
+@st.cache_data(ttl=0)
+def get_interactions_data():
     try:
-        conn.update(worksheet="interactions", data=log_data, append=True)
+        return conn.read(worksheet="interactions")
+    except Exception as e:
+        st.error(f"Error reading interaction data: {e}")
+        return pd.DataFrame(columns=["timestamp", "chart_type", "time_taken"])
+
+def log_interaction(chart_type, time_taken):
+    new_row = {"timestamp":datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "chart_type": chart_type,
+               "time_taken": time_taken}
+    try:
+        try:
+            existing_data = conn.read(worksheet="interactions")
+        except Exception:
+            existing_data = pd.DataFrame(columns=['timestamp', 'chart_type', 'time_taken'])
+        new_index = len(existing_data)
+        existing_data.loc[new_index] = new_row
+        conn.update(worksheet="interactions", data=existing_data)
+        get_interactions_data.clear()
         return True
+
     except Exception as e:
         st.error(f'Error logging interaction log data: {e}')
         return False
@@ -71,6 +89,7 @@ def main():
     st.markdown(
         "**Question:** Can we identify a penguin species from bill length, bill depth, or a combination of both?"
     )
+
     df = load_data()
 
     if st.button("Show Chart"):
@@ -79,7 +98,6 @@ def main():
         st.session_state.chart_type = random.choice(['violin', 'pair'])
         st.session_state.interaction_logged = False
 
-    # Display the chart and answer button if a chart is shown
     if st.session_state.chart_displayed:
         if st.session_state.chart_type == 'violin':
             fig = create_violin_plot(df)
@@ -93,7 +111,6 @@ def main():
             end_time = time.time()
             duration = end_time - st.session_state.start_time
             st.success(f"Time taken to answer: {duration:.2f} seconds")
-            st.balloons()
 
             if not st.session_state.interaction_logged:
                 success = log_interaction(st.session_state.chart_type, duration)
@@ -101,11 +118,17 @@ def main():
                     st.session_state.interaction_logged = True
                     st.info("Interaction logged successfully!")
 
-            # Reset session state for the next round
             st.session_state.chart_displayed = False
             st.session_state.start_time = None
             st.session_state.chart_type = None
             st.session_state.interaction_logged = False
+
+
+    with st.expander("Debug Information"):
+        interactions_data = get_interactions_data()
+        st.write("Current Interactions Data:")
+        st.dataframe(interactions_data)
+        st.write(f"Total interactions recorded: {len(interactions_data)}")
 
 if __name__ == "__main__":
     main()
