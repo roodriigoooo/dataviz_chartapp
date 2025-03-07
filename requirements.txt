@@ -1,6 +1,5 @@
 streamlit
 plotly.express
 pandas
-streamlit_gsheets
 st-gsheets-connection
 pandasql
