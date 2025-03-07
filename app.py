@@ -6,8 +6,6 @@ import plotly.express as px
 import pandas as pd
 from datetime import datetime
 
-from typing_extensions import get_origin
-
 species = ["Adelie", "Chinstrap", "Gentoo"]
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -106,11 +104,10 @@ def main():
             fig = create_pair_plot(df)
             st.plotly_chart(fig)
 
-        # Button to indicate the user has answered
         if st.button("I answered your question"):
             end_time = time.time()
             duration = end_time - st.session_state.start_time
-            st.success(f"Time taken to answer: {duration:.2f} seconds")
+            st.info(f"Time taken to answer: {duration:.2f} seconds")
 
             if not st.session_state.interaction_logged:
                 success = log_interaction(st.session_state.chart_type, duration)
@@ -128,7 +125,16 @@ def main():
         interactions_data = get_interactions_data()
         st.write("Current Interactions Data:")
         st.dataframe(interactions_data)
-        st.write(f"Total interactions recorded: {len(interactions_data)}")
+
+        if not interactions_data.empty:
+            st.write(f"Total interactions recorded: {len(interactions_data)}")
+            avg_by_chart = interactions_data.groupby('chart_type')['time_taken'].mean()
+            st.write("Average time by chart type:")
+            st.dataframe(avg_by_chart)
+
+            count_by_chart = interactions_data['chart_type'].value_counts()
+            st.write('Number of tests by chart type:')
+            st.dataframe(count_by_chart)
 
 if __name__ == "__main__":
     main()
