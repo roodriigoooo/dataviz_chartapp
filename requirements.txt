@@ -1,4 +1,6 @@
 streamlit
 plotly.express
 pandas
-st-gsheets-connection
+streamlit_gsheets
+git+https://github.com/streamlit/gsheets-connection
+pandasql

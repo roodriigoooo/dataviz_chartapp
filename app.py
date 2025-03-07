@@ -4,6 +4,7 @@ import time
 import random
 import plotly.express as px
 import pandas as pd
+from datetime import datetime
 
 species = ["Adelie", "Chinstrap", "Gentoo"]
 
@@ -18,14 +19,26 @@ if 'chart_type' not in st.session_state:
 
 @st.cache_data
 def load_data():
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read()
+    df = conn.read(worksheet="penguins")
     valid_species = ["Adelie", "Chinstrap", "Gentoo"]
     invalid_rows = df[~df['species'].isin(valid_species)]
     if not invalid_rows.empty:
         st.warning(f"Found {len(invalid_rows)} rows with invalid species. They will be excluded.")
     df = df[df['species'].isin(valid_species)]
     return df
+
+def log_interaction(chart_type, time_taken):
+    log_data = pd.DataFrame({
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "chart_type": chart_type,
+        "time_taken": time_taken
+    })
+    try:
+        conn.update(worksheet="interactions", data=log_data, append=True)
+        return True
+    except Exception as e:
+        st.error(f'Error logging interaction log data: {e}')
+        return False
 
 # violin  plot
 def create_violin_plot(df):
@@ -64,6 +77,7 @@ def main():
         st.session_state.chart_displayed = True
         st.session_state.start_time = time.time()
         st.session_state.chart_type = random.choice(['violin', 'pair'])
+        st.session_state.interaction_logged = False
 
     # Display the chart and answer button if a chart is shown
     if st.session_state.chart_displayed:
@@ -80,10 +94,18 @@ def main():
             duration = end_time - st.session_state.start_time
             st.success(f"Time taken to answer: {duration:.2f} seconds")
             st.balloons()
+
+            if not st.session_state.interaction_logged:
+                success = log_interaction(st.session_state.chart_type, duration)
+                if success:
+                    st.session_state.interaction_logged = True
+                    st.info("Interaction logged successfully!")
+
             # Reset session state for the next round
             st.session_state.chart_displayed = False
             st.session_state.start_time = None
             st.session_state.chart_type = None
+            st.session_state.interaction_logged = False
 
 if __name__ == "__main__":
     main()
