@@ -49,7 +49,6 @@ def log_interaction(chart_type, time_taken):
         new_index = len(existing_data)
         existing_data.loc[new_index] = new_row
         conn.update(worksheet="interactions", data=existing_data)
-        get_interactions_data.clear()
         return True
 
     except Exception as e:
@@ -121,7 +120,7 @@ def main():
             st.session_state.interaction_logged = False
 
 
-    with st.expander("Debug Information"):
+    with st.expander("Other Interactions"):
         interactions_data = get_interactions_data()
         st.write("Current Interactions Data:")
         st.dataframe(interactions_data)
