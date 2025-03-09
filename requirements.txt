@@ -3,4 +3,4 @@ plotly.express
 pandas
 st-gsheets-connection
 pandasql
-scipy.stats
+scipy
