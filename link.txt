@@ -1,0 +1,4 @@
+The link to the app is: https://datavizchartapp.streamlit.app/
+
+The source code is also available through GitHub (also accessible through the link): https://github.com/roodriigoooo/dataviz_chartapp
+
